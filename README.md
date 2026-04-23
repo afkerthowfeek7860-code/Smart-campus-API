@@ -1,15 +1,150 @@
-Smart Campus Sensor & Room Management API
- OverviewThis project implements a robust, scalable RESTful API for a "Smart Campus" initiative at the University of Westminster. The API provides a seamless interface for facilities managers to interact with campus data, including managing thousands of rooms and a diverse array of sensors such as CO2 monitors and occupancy trackers.The system is built using JAX-RS (Jersey) and follows industry-standard architectural patterns, including resource nesting, resilient error handling, and logical resource hierarchies.⚙️ How to RunPrerequisitesJava JDK 11 (Recommended to match project configuration)Maven 3.6+Apache Tomcat 9.0.xStepsClone the Repository:Bashgit clone https://github.com/your-username/SmartCampusAPI.git
-Build the Project:Navigate to the project directory and run:Bashmvn clean install
-Deploy to Tomcat:Copy the generated SmartCampusAPI.war from the target folder to your Tomcat webapps directory.Start Tomcat using catalina.bat run.Access the API:The API entry point is established at:http://localhost:8080/SmartCampusAPI/api/v1🌐 API Endpoints🔹 DiscoveryMethodEndpointDescriptionGET/Returns API metadata, contact info, and primary resource links.🔹 Room ManagementMethodEndpointDescriptionGET/roomsRetrieve a list of all rooms.POST/roomsCreate a new room (Requires id, name, capacity).GET/rooms/{id}Fetch detailed metadata for a specific room.DELETE/rooms/{id}Decommission a room (Blocked if sensors are assigned).🔹 Sensor OperationsMethodEndpointDescriptionGET/sensorsRetrieve all sensors.GET/sensors?type={t}Filter sensors by category (e.g., CO2, Temperature).POST/sensorsRegister a sensor to a valid Room ID.🔹 Historical Readings (Sub-Resources)MethodEndpointDescriptionGET/sensors/{id}/readingsFetch history of readings for a specific sensor.POST/sensors/{id}/readingsAppend a new reading (Updates parent sensor's currentValue).🧪 Sample CURL Commands1. Create a RoomBashcurl -X POST http://localhost:8080/SmartCampusAPI/api/v1/rooms \
+# 🏫 Smart Campus Sensor & Room Management API
+
+---
+
+## 📌 Overview
+This project implements a RESTful API for a Smart Campus system at the University of Westminster.
+
+### 🔹 Key Features
+- Manage campus Rooms
+- Register and monitor Sensors
+- Store Sensor Readings (history)
+- Filter sensors by type
+- Built using JAX-RS (Jersey)
+
+### 🔹 Design Principles
+- RESTful architecture
+- Resource-based hierarchy
+- Sub-resource nesting
+- Centralized error handling
+- Thread-safe in-memory storage
+
+---
+
+## ⚙️ How to Run
+
+### 🔹 Prerequisites
+- Java JDK 11+
+- Maven 3.6+
+- Apache Tomcat 9
+
+### 🔹 Steps
+
+1. Clone repository
+git clone https://github.com/your-username/SmartCampusAPI.git
+
+2. Build project
+mvn clean install
+
+3. Deploy to Tomcat
+Copy:
+target/SmartCampusAPI.war
+
+Into:
+Tomcat/webapps
+
+4. Start Tomcat
+catalina.bat run
+
+5. Access API
+http://localhost:8080/SmartCampusAPI/api/v1
+
+---
+
+## 🌐 API Endpoints
+
+### 🔹 Discovery
+- GET /
+  → Returns API metadata and resource links
+
+---
+
+### 🔹 Room Management
+- GET /rooms → Get all rooms
+- POST /rooms → Create a room
+- GET /rooms/{id} → Get room details
+- DELETE /rooms/{id} → Delete room (blocked if sensors exist)
+
+---
+
+### 🔹 Sensor Operations
+- GET /sensors → Get all sensors
+- GET /sensors?type={type} → Filter sensors
+- POST /sensors → Register sensor
+
+---
+
+### 🔹 Sensor Readings
+- GET /sensors/{id}/readings → Get readings
+- POST /sensors/{id}/readings → Add reading
+
+✔ Automatically updates sensor currentValue
+
+---
+
+## 🧪 Sample CURL Commands
+
+1. Create Room
+curl -X POST http://localhost:8080/SmartCampusAPI/api/v1/rooms \
 -H "Content-Type: application/json" \
 -d '{"id":"LIB-301","name":"Library Quiet Study","capacity":50}'
-2. Register a SensorBashcurl -X POST http://localhost:8080/SmartCampusAPI/api/v1/sensors \
+
+2. Register Sensor
+curl -X POST http://localhost:8080/SmartCampusAPI/api/v1/sensors \
 -H "Content-Type: application/json" \
 -d '{"id":"TEMP-001","type":"Temperature","status":"ACTIVE","roomId":"LIB-301"}'
-3. Add a Sensor ReadingBashcurl -X POST http://localhost:8080/SmartCampusAPI/api/v1/sensors/TEMP-001/readings \
+
+3. Add Sensor Reading
+curl -X POST http://localhost:8080/SmartCampusAPI/api/v1/sensors/TEMP-001/readings \
 -H "Content-Type: application/json" \
 -d '{"value":22.5}'
-4. Filter Sensors by TypeBashcurl http://localhost:8080/SmartCampusAPI/api/v1/sensors?type=Temperature
-5. Demonstrate Error: Delete Non-Empty Room (409 Conflict)Bashcurl -X DELETE http://localhost:8080/SmartCampusAPI/api/v1/rooms/LIB-301
-📘 Report Answers✅ Part 1: Service ArchitectureLifecycle: JAX-RS resources are request-scoped by default. A new instance is created for every incoming request. To prevent data loss, shared in-memory data structures are managed using static ConcurrentHashMap objects in DataStore.java to ensure thread safety.HATEOAS: Hypermedia improves API discoverability, allowing client developers to navigate the resource hierarchy dynamically via links provided in responses, reducing coupling to static documentation.✅ Part 2: Room ManagementIDs vs Full Objects: Returning only IDs minimizes network bandwidth but increases client latency due to subsequent calls. Returning full objects simplifies client processing but increases payload size.Idempotency: The DELETE operation is idempotent. Whether a client deletes a room once or multiple times, the final state of the server is the same: the room is gone.✅ Part 3: Sensor Operations@Consumes Mismatch: If a client sends an unsupported format like text/plain, JAX-RS automatically returns an HTTP 415 Unsupported Media Type status.QueryParam vs PathParam: Query parameters are superior for filtering collections because they are optional and flexible, whereas path parameters imply a fixed resource hierarchy.✅ Part 4: Sub-ResourcesSub-Resource Locator: This pattern delegates logic to separate classes (e.g., SensorReadingResource), helping manage complexity by separating historical logging logic from general sensor management.✅ Part 5: Error Handling & LoggingHTTP 422 vs 404: 422 is more semantically accurate for valid JSON that contains invalid logical references (like a non-existent roomId), as 404 typically refers to an invalid URL path.Stack Trace Risks: Exposing raw Java stack traces reveals internal library versions and file structures, providing attackers with a roadmap for potential exploits.JAX-RS Filters: Using ApiLoggingFilter centralizes observability, ensuring every request and response is logged consistently without cluttering individual resource methods.
+
+4. Filter Sensors
+curl http://localhost:8080/SmartCampusAPI/api/v1/sensors?type=Temperature
+
+5. Delete Room (Error Example)
+curl -X DELETE http://localhost:8080/SmartCampusAPI/api/v1/rooms/LIB-301
+
+→ Returns 409 Conflict if sensors exist
+
+---
+
+## 📘 Report Answers
+
+### ✅ Part 1: Service Architecture
+- JAX-RS resources are request-scoped (new instance per request)
+- Shared data handled using ConcurrentHashMap
+- HATEOAS improves API navigation and reduces dependency on static documentation
+
+---
+
+### ✅ Part 2: Room Management
+- IDs → smaller payload but more client requests
+- Full objects → larger payload but easier client use
+- DELETE is idempotent (same result even if repeated)
+
+---
+
+### ✅ Part 3: Sensor Operations
+- Wrong data format → 415 Unsupported Media Type
+- QueryParam is better for filtering than PathParam
+
+---
+
+### ✅ Part 4: Sub-Resources
+- Sub-resource locator separates logic into smaller classes
+- Improves maintainability and structure
+
+---
+
+### ✅ Part 5: Error Handling & Logging
+- 422 → invalid data in request
+- 404 → invalid URL
+- Stack traces should not be exposed (security risk)
+- Logging filters provide centralized request/response logging
+
+---
+
+## ⚠️ Notes
+- Uses in-memory storage (HashMap / ArrayList)
+- No database used (as required for coursework)
